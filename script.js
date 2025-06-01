@@ -51,7 +51,11 @@ function handleButtonClick(event) {
             button.textContent = currentPlayer;
             button.disabled = true;
             if (checkWin()) {
-                showResult(`${currentPlayer} yutdi!`);
+                if (gameMode !== 'friend' && currentPlayer === 'X') {
+                    showResult('Voy, siz g\'alaba qozondingiz.Qiyin darajada o\'ynashga harakat qiling!');
+                } else {
+                    showResult(`${currentPlayer} yutdi!`);
+                }
             } else if (gameBoard.every(cell => cell !== '')) {
                 showResult("Durrang!");
             } else {
@@ -94,7 +98,7 @@ function makeAIMove() {
         buttons[move].textContent = 'O';
         buttons[move].disabled = true;
         if (checkWin()) {
-            showResult('O yutdi!');
+            showResult("Yutqazdingiz! Su'niy intellekt hattoki ko‘z yumib ham yutdi! 😂");
         } else if (gameBoard.every(cell => cell !== '')) {
             showResult("Durrang!");
         } else {
@@ -188,6 +192,7 @@ function checkWinner(player) {
     });
 }
 
+// Event listeners with error checking
 function setupEventListeners() {
     const gameContainer = document.querySelector('.container');
     if (gameContainer) {
@@ -213,9 +218,9 @@ function setupEventListeners() {
     if (newGameBtn) {
         newGameBtn.addEventListener('click', () => {
             if (gameWrapper && menuScreen && popup) {
-                gameWrapper.classList.add('hide'); 
-                menuScreen.classList.remove('hide'); 
-                popup.classList.add('hide'); 
+                gameWrapper.classList.add('hide');
+                menuScreen.classList.remove('hide');
+                popup.classList.add('hide');
                 gameBoard = ['', '', '', '', '', '', '', '', ''];
                 buttons.forEach(button => {
                     button.textContent = '';
