@@ -1,117 +1,236 @@
-const menuScreen = document.getElementById("menuScreen");
-const aiMenu = document.getElementById("aiMenu");
-const gameWrapper = document.getElementById("gameWrapper");
+let currentPlayer = 'X';
+let gameBoard = ['', '', '', '', '', '', '', '', ''];
+let gameActive = false;
+let gameMode = '';
 
-const btnRef = document.querySelectorAll(".button-option");
-const popupRef = document.querySelector(".popup");
-const newgameBtn = document.getElementById("new-game");
-const restartBtn = document.getElementById("restart");
-const msgRef = document.getElementById("message");
-
-let winningPattern = [
-  [0, 1, 2], [0, 3, 6], [2, 5, 8],
-  [6, 7, 8], [3, 4, 5], [1, 4, 7],
-  [0, 4, 8], [2, 4, 6],
+const winningCombinations = [
+    [0, 1, 2], [3, 4, 5], [6, 7, 8],
+    [0, 3, 6], [1, 4, 7], [2, 5, 8],
+    [0, 4, 8], [2, 4, 6]
 ];
 
-let xTurn = true;
-let count = 0;
-let gameMode = "friend";
-
-function showAIMenu() {
-  menuScreen.classList.add("hide");
-  aiMenu.classList.remove("hide");
-}
-
-function backToMainMenu() {
-  aiMenu.classList.add("hide");
-  menuScreen.classList.remove("hide");
-}
+const buttons = document.querySelectorAll('.button-option');
+const restartBtn = document.getElementById('restart');
+const newGameBtn = document.getElementById('new-game');
+const messageElement = document.getElementById('message');
+const popup = document.querySelector('.popup');
+const gameWrapper = document.getElementById('gameWrapper');
+const menuScreen = document.getElementById('menuScreen');
+const aiMenu = document.getElementById('aiMenu');
 
 function startGame(mode) {
-  gameMode = mode;
-  menuScreen.classList.add("hide");
-  aiMenu.classList.add("hide");
-  gameWrapper.classList.remove("hide");
-  enableButtons();
+    gameMode = mode;
+    gameActive = true;
+    currentPlayer = 'X';
+    gameBoard = ['', '', '', '', '', '', '', '', ''];
+    buttons.forEach(button => {
+        button.textContent = '';
+        button.disabled = false;
+    });
+    menuScreen.classList.add('hide');
+    aiMenu.classList.add('hide');
+    gameWrapper.classList.remove('hide');
+    popup.classList.add('hide');
+    if (gameMode !== 'friend' && currentPlayer === 'O') {
+        makeAIMove();
+    }
 }
 
-// ==== O‘yin logikasi ====
+function showAIMenu() {
+    menuScreen.classList.add('hide');
+    aiMenu.classList.remove('hide');
+}
 
-const disableButtons = () => {
-  btnRef.forEach((el) => (el.disabled = true));
-  popupRef.classList.remove("hide");
-};
-
-const enableButtons = () => {
-  btnRef.forEach((el) => {
-    el.innerText = "";
-    el.disabled = false;
-  });
-  popupRef.classList.add("hide");
-  count = 0;
-  xTurn = true;
-};
-
-const winFunction = (letter) => {
-  disableButtons();
-  msgRef.innerHTML = `🎉<br> ' ${letter} ' G'alaba qozondi`;
-};
-
-const drawFunction = () => {
-  disableButtons();
-  msgRef.innerHTML = "😎<br> Durang";
-};
-
-const winChecker = () => {
-  for (let pattern of winningPattern) {
-    let [a, b, c] = [btnRef[pattern[0]], btnRef[pattern[1]], btnRef[pattern[2]]];
-    if (a.innerText && a.innerText === b.innerText && a.innerText === c.innerText) {
-      winFunction(a.innerText);
-      return true;
+function handleButtonClick(event) {
+    if (!gameActive) return;
+    const button = event.target;
+    if (button.classList.contains('button-option')) {
+        const index = Array.from(buttons).indexOf(button);
+        if (gameBoard[index] === '') {
+            gameBoard[index] = currentPlayer;
+            button.textContent = currentPlayer;
+            button.disabled = true;
+            if (checkWin()) {
+                showResult(`${currentPlayer} yutdi!`);
+            } else if (gameBoard.every(cell => cell !== '')) {
+                showResult("Durrang!");
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                if (gameMode !== 'friend' && currentPlayer === 'O') {
+                    makeAIMove();
+                }
+            }
+        }
     }
-  }
-  return false;
-};
+}
 
-// X / O bosish logikasi
-btnRef.forEach((el) => {
-  el.addEventListener("click", () => {
-    if (el.innerText !== "") return;
+function checkWin() {
+    return winningCombinations.some(combination => {
+        return combination.every(index => gameBoard[index] === currentPlayer);
+    });
+}
 
-    if (gameMode === "friend") {
-      el.innerText = xTurn ? "X" : "O";
-      el.style.color = "#ffffff";
-      xTurn = !xTurn;
+function showResult(message) {
+    if (messageElement) {
+        messageElement.textContent = message;
+    }
+    if (popup) {
+        popup.classList.remove('hide');
+    }
+    gameActive = false;
+}
+
+function makeAIMove() {
+    let move;
+    if (gameMode === 'easy') {
+        move = getRandomMove();
+    } else if (gameMode === 'medium') {
+        move = getMediumMove();
+    } else if (gameMode === 'difficult') {
+        move = getBestMove();
+    }
+    if (move !== -1) {
+        gameBoard[move] = 'O';
+        buttons[move].textContent = 'O';
+        buttons[move].disabled = true;
+        if (checkWin()) {
+            showResult('O yutdi!');
+        } else if (gameBoard.every(cell => cell !== '')) {
+            showResult("Durrang!");
+        } else {
+            currentPlayer = 'X';
+        }
+    }
+}
+
+function getRandomMove() {
+    const emptyCells = gameBoard.reduce((acc, cell, index) => {
+        if (cell === '') acc.push(index);
+        return acc;
+    }, []);
+    return emptyCells[Math.floor(Math.random() * emptyCells.length)] || -1;
+}
+
+function getMediumMove() {
+    for (let i = 0; i < gameBoard.length; i++) {
+        if (gameBoard[i] === '') {
+            gameBoard[i] = 'O';
+            if (checkWin()) {
+                gameBoard[i] = '';
+                return i;
+            }
+            gameBoard[i] = '';
+        }
+    }
+    for (let i = 0; i < gameBoard.length; i++) {
+        if (gameBoard[i] === '') {
+            gameBoard[i] = 'X';
+            if (checkWin()) {
+                gameBoard[i] = '';
+                return i;
+            }
+            gameBoard[i] = '';
+        }
+    }
+    return getRandomMove();
+}
+
+function getBestMove() {
+    let bestScore = -Infinity;
+    let move = -1;
+    for (let i = 0; i < gameBoard.length; i++) {
+        if (gameBoard[i] === '') {
+            gameBoard[i] = 'O';
+            let score = minimax(gameBoard, 0, false);
+            gameBoard[i] = '';
+            if (score > bestScore) {
+                bestScore = score;
+                move = i;
+            }
+        }
+    }
+    return move;
+}
+
+function minimax(board, depth, isMaximizing) {
+    if (checkWinner('O')) return 10 - depth;
+    if (checkWinner('X')) return depth - 10;
+    if (board.every(cell => cell !== '')) return 0;
+
+    if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < board.length; i++) {
+            if (board[i] === '') {
+                board[i] = 'O';
+                let score = minimax(board, depth + 1, false);
+                board[i] = '';
+                bestScore = Math.max(score, bestScore);
+            }
+        }
+        return bestScore;
     } else {
-      el.innerText = "X";
-      el.disabled = true;
-      setTimeout(() => makeAIMove(), 500); // AI harakati
+        let bestScore = Infinity;
+        for (let i = 0; i < board.length; i++) {
+            if (board[i] === '') {
+                board[i] = 'X';
+                let score = minimax(board, depth + 1, true);
+                board[i] = '';
+                bestScore = Math.min(score, bestScore);
+            }
+        }
+        return bestScore;
     }
+}
 
-    count++;
-    if (count === 9 && !winChecker()) {
-      drawFunction();
+function checkWinner(player) {
+    return winningCombinations.some(combination => {
+        return combination.every(index => gameBoard[index] === player);
+    });
+}
+
+function setupEventListeners() {
+    const gameContainer = document.querySelector('.container');
+    if (gameContainer) {
+        gameContainer.addEventListener('click', handleButtonClick);
     } else {
-      winChecker();
+        console.error('Game container not found');
     }
-  });
-});
 
-const makeAIMove = () => {
-  if (gameMode === "easy") {
-    let available = [...btnRef].filter((b) => b.innerText === "");
-    let random = available[Math.floor(Math.random() * available.length)];
-    if (random) {
-      random.innerText = "O";
-      random.disabled = true;
-      count++;
-      if (count === 9 && !winChecker()) drawFunction();
-      else winChecker();
+    if (restartBtn) {
+        restartBtn.addEventListener('click', () => {
+            if (gameWrapper && menuScreen) {
+                gameWrapper.classList.add('hide');
+                menuScreen.classList.remove('hide');
+                popup.classList.add('hide');
+            } else {
+                console.error('gameWrapper or menuScreen not found');
+            }
+        });
+    } else {
+        console.error('Restart button not found');
     }
-  }
-};
 
-// restart
-newgameBtn.addEventListener("click", enableButtons);
-restartBtn.addEventListener("click", enableButtons);
+    if (newGameBtn) {
+        newGameBtn.addEventListener('click', () => {
+            if (gameWrapper && menuScreen && popup) {
+                gameWrapper.classList.add('hide'); 
+                menuScreen.classList.remove('hide'); 
+                popup.classList.add('hide'); 
+                gameBoard = ['', '', '', '', '', '', '', '', ''];
+                buttons.forEach(button => {
+                    button.textContent = '';
+                    button.disabled = false;
+                });
+                gameActive = false;
+                gameMode = '';
+                currentPlayer = 'X';
+            } else {
+                console.error('gameWrapper, menuScreen, or popup not found');
+            }
+        });
+    } else {
+        console.error('New game button not found');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', setupEventListeners);
